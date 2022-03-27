@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 import flask
-from flask import Flask, request
+from flask import Flask, request, redirect, jsonify
 from flask_sockets import Sockets
 import gevent
 from gevent import queue
@@ -59,28 +59,81 @@ class World:
     def world(self):
         return self.space
 
-myWorld = World()        
+class Client: # I did not write this class, resource: https://github.com/uofa-cmput404/cmput404-slides/blob/d187f73a2fe5008eef0fbcb823820a31b27d8cca/examples/WebSocketsExamples/broadcaster.py#L122
+    def __init__(self):
+        self.queue = queue.Queue()
+
+    def put(self, v):
+        self.queue.put_nowait(v)
+
+    def get(self):
+        return self.queue.get()
+
+
+
+myWorld = World()   
+clients = list()     
+
+def send_all_json(object):
+    for client in clients:
+        client.put(json.dumps(object))
 
 def set_listener( entity, data ):
     ''' do something with the update ! '''
+    send_all_json({ entity : data })
+
 
 myWorld.add_set_listener( set_listener )
         
 @app.route('/')
 def hello():
     '''Return something coherent here.. perhaps redirect to /static/index.html '''
-    return None
+    return redirect("/static/index.html", code=302)
 
 def read_ws(ws,client):
     '''A greenlet function that reads from the websocket and updates the world'''
     # XXX: TODO IMPLEMENT ME
-    return None
+    # Reference: https://gist.github.com/punchagan/53600958c1799c2dcf26
+    # Reference: https://github.com/uofa-cmput404/cmput404-slides/blob/master/examples/WebSocketsExamples/broadcaster.py
+    while True:
+        # Read from the websocket
+        message = ws.receive()
+        if message is not None:
+            # print("read_ws..", message)
+            # Send message to all listeners
+            packet = json.loads(message)
+            send_all_json(packet)
+        else:
+            print("message is None..")
+            break
+
 
 @sockets.route('/subscribe')
 def subscribe_socket(ws):
     '''Fufill the websocket URL of /subscribe, every update notify the
        websocket and read updates from the websocket '''
     # XXX: TODO IMPLEMENT ME
+    # Reference: https://devcenter.heroku.com/articles/python-websockets
+    # https://websockets.spec.whatwg.org/#the-websocket-interface
+    # https://github.com/uofa-cmput404/cmput404-slides/blob/d187f73a2fe5008eef0fbcb823820a31b27d8cca/examples/WebSocketsExamples/broadcaster.py
+    client = Client()
+    clients.append(client)
+    g = gevent.spawn(read_ws, ws, client)
+
+    try:
+        while True:
+            message = client.get()
+            print("Client has got a message.")
+            # Sending message through ws
+            ws.send(message)
+    except Exception as e:
+        print("error in def subscribe_socket", e)
+    finally:
+        clients.remove(client)
+        gevent.kill(g)
+
+    
+
     return None
 
 
@@ -99,23 +152,35 @@ def flask_post_json():
 @app.route("/entity/<entity>", methods=['POST','PUT'])
 def update(entity):
     '''update the entities via this interface'''
-    return None
+    data = flask_post_json()
+    myWorld.set(entity, data)
+    # https://stackoverflow.com/questions/11332465/how-to-return-value-from-python-as-json
+    # https://stackoverflow.com/questions/45412228/sending-json-and-status-code-with-a-flask-response
+    return jsonify(myWorld.get(entity))
 
 @app.route("/world", methods=['POST','GET'])    
 def world():
     '''you should probably return the world here'''
-    return None
+    if request.method == 'GET':
+        return jsonify(myWorld.world())
+    elif request.method == 'POST':
+        data = flask_post_json()
+        for key, value in data.items():
+            myWorld.set(key, value)
+        return jsonify(myWorld.world())
 
 @app.route("/entity/<entity>")    
 def get_entity(entity):
     '''This is the GET version of the entity interface, return a representation of the entity'''
-    return None
+    return jsonify(myWorld.get(entity))
 
 
 @app.route("/clear", methods=['POST','GET'])
 def clear():
     '''Clear the world out!'''
-    return None
+    myWorld.clear()
+    return jsonify(myWorld.world())
+
 
 
 
