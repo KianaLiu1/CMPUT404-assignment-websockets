@@ -59,3 +59,13 @@ Contributors
 * Mark Galloway
 * Abram Hindle
 * Cole Mackenzie
+* Kiana Liu
+
+References
+============
+https://gist.github.com/punchagan/53600958c1799c2dcf26
+https://devcenter.heroku.com/articles/python-websockets
+https://websockets.spec.whatwg.org/#the-websocket-interface
+https://github.com/uofa-cmput404/cmput404-slides/blob/master/examples/WebSocketsExamples/broadcaster.py
+https://stackoverflow.com/questions/6268679/best-way-to-get-the-key-of-a-key-value-javascript-object
+https://stackoverflow.com/questions/6268679/best-way-to-get-the-key-of-a-key-value-javascript-object
