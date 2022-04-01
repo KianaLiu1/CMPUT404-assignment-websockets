@@ -130,7 +130,7 @@
         function addEntity(entity, data) {
             world[entity] = data;
             drawNextFrame(); // (but should we?)
-            var object = {}
+            var object = {};
             object[entity] = data;
             socket.send(JSON.stringify(object))
         }
