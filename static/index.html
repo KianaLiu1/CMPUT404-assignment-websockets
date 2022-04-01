@@ -132,7 +132,7 @@
             drawNextFrame(); // (but should we?)
             var object = {};
             object[entity] = data;
-            socket.send(JSON.stringify(object))
+            socket.send(JSON.stringify(object));
         }
         var counter = 0;
         function addEntityWithoutName(data) {
